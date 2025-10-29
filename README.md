@@ -99,6 +99,27 @@ Sync Gradle files via File > Sync Project with Gradle Files.
 |  |  | 
 
 
+🧠 Extended Voice Command Reference
+Based on the code in your project, here is a more detailed list of supported voice commands and their functions:
+📱 Device & System Commands
+- "hey lock my screen" or "lock the screen": Locks the device (requires Device Admin permission).
+- "hey call [contact name]" or "call [contact name]": Initiates a phone call to the specified contact.
+- "hey nancy take picture" or "take a picture": Opens the rear camera to take a photo.
+- "hey nancy take selfie" or "take a selfie": Opens the front camera to take a selfie.
+- "open camera": Opens the rear camera.
+- "open photos" or "show images": Opens the photo gallery.
+- "open videos" or "show videos": Opens the video gallery.
+💬 Information & Assistant Commands
+- "hey" or "hi": Triggers a friendly greeting from the assistant.
+- "time": Tells the current time.
+- "date": Tells the current date.
+- "remember [something]": Stores a piece of information for later recall.
+- "know": Retrieves previously stored information.
+🎵 Media Commands
+- "play video [video name]": Plays a video from YouTube. If no name is given, the assistant will prompt for one.
+- "play songs [song name]" or "play song [song name]": Plays a song from YouTube. If offline, opens the default music player. If no name is given, the assistant will prompt for one.
+
+
 Note: Command phrasing is flexible—keyword detection drives execution.
 
 
