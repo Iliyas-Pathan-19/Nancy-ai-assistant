@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">speech2text</string>
+    <string name="start_listening">Start Listening</string>
+    <string name="speech_to_text">SPEECH TO TEXT</string>
+    <string name="edit_text_hint">Your text here</string>
+    <string name="send_button_text">Send</string>
+    <string name="settings_button_text">Settings</string>
+    <string name="delete">Delete</string>
+</resources>
