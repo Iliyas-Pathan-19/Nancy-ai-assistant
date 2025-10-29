@@ -4,6 +4,7 @@ import static com.example.speech2text.Functions.wishMe;
 
 import android.Manifest;
 import android.app.admin.DevicePolicyManager;
+import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
@@ -60,9 +61,12 @@ public class MainActivity extends AppCompatActivity {
     private EditText editText;
     private TextToSpeech tts;
     private boolean isWaitingForSong = false;
+    private boolean isWaitingForVideo = false;
     private static final int READ_CONTACTS_PERMISSION_REQUEST = 1;
     private static final int CALL_PHONE_PERMISSION_REQUEST = 2;
     private static final int CAMERA_PERMISSION_REQUEST = 3;
+    private static final int READ_MEDIA_IMAGES_PERMISSION_REQUEST = 4;
+    private static final int READ_MEDIA_VIDEO_PERMISSION_REQUEST = 5;
 
     private DevicePolicyManager devicePolicyManager;
     private ComponentName deviceAdminComponent;
@@ -88,7 +92,7 @@ public class MainActivity extends AppCompatActivity {
         deviceAdminComponent = new ComponentName(this, DeviceAdmin.class);
 
         Dexter.withContext(this)
-                .withPermissions(Manifest.permission.RECORD_AUDIO, Manifest.permission.READ_CONTACTS, Manifest.permission.CALL_PHONE, Manifest.permission.CAMERA)
+                .withPermissions(Manifest.permission.RECORD_AUDIO, Manifest.permission.READ_CONTACTS, Manifest.permission.CALL_PHONE, Manifest.permission.CAMERA, Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO)
                 .withListener(new MultiplePermissionsListener() {
                     @Override
                     public void onPermissionsChecked(MultiplePermissionsReport multiplePermissionsReport) {
@@ -133,6 +137,15 @@ public class MainActivity extends AppCompatActivity {
                     });
                 } else if ("requestDeviceAdmin".equals(utteranceId)) {
                     runOnUiThread(() -> deviceAdminResultLauncher.launch(deviceAdminIntent));
+                } else if ("videoQuery".equals(utteranceId)) {
+                    runOnUiThread(() -> {
+                        if (isWaitingForVideo) {
+                            Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+                            intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
+                            recognizer.startListening(intent);
+                        }
+                    });
                 }
             }
 
@@ -277,8 +290,22 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
+        if (msgs.contains("open camera")) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                openCamera(false);
+            } else {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_REQUEST);
+            }
+            return;
+        }
+
         if (msgs.contains("open photos") || msgs.contains("show images")) {
-            openGallery();
+            openMedia("images");
+            return;
+        }
+
+        if (msgs.contains("open videos") || msgs.contains("show videos")) {
+            openMedia("videos");
             return;
         }
 
@@ -315,6 +342,57 @@ public class MainActivity extends AppCompatActivity {
 
         // --- NETWORK-DEPENDENT COMMANDS ---
 
+        if (isWaitingForVideo) {
+            isWaitingForVideo = false;
+            if (msgs.contains("cancel") || msgs.contains("stop")) {
+                speak("Okay, cancelling the video request.");
+                return;
+            }
+            if (!isNetworkAvailable()) {
+                speak("You are offline. Please check your internet connection to play videos.");
+                return;
+            }
+            speak("Playing " + msgs + " on YouTube.");
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=" + msgs));
+            startActivity(intent);
+            return;
+        }
+
+        if (isWaitingForSong) {
+            isWaitingForSong = false;
+            if (msgs.contains("cancel") || msgs.contains("stop")) {
+                speak("Okay, cancelling the song request.");
+                return;
+            }
+            if (!isNetworkAvailable()) {
+                speak("You are offline. Please check your internet connection.");
+                return;
+            }
+            speak("Playing " + msgs);
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=" + msgs));
+            startActivity(intent);
+            return;
+        }
+
+        if (msgs.contains("play video")) {
+            if (!isNetworkAvailable()) {
+                speak("You need an internet connection to play videos from YouTube.");
+                return;
+            }
+
+            String videoName = msgs.substring(msgs.indexOf("play video") + "play video".length()).trim();
+
+            if (videoName.isEmpty()) {
+                isWaitingForVideo = true;
+                speak("Which video should I play on YouTube for you?", "videoQuery");
+            } else {
+                speak("Playing " + videoName + " on YouTube.");
+                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=" + videoName));
+                startActivity(intent);
+            }
+            return;
+        }
+
         if (msgs.contains("play songs") || msgs.contains("play song")) {
             if (isNetworkAvailable()) {
                 String songName;
@@ -336,22 +414,6 @@ public class MainActivity extends AppCompatActivity {
                 speak("You are offline. Opening your music player.");
                 playOfflineMusic();
             }
-            return;
-        }
-
-        if (isWaitingForSong) {
-            isWaitingForSong = false;
-            if (msgs.contains("cancel") || msgs.contains("stop")) {
-                speak("Okay, cancelling the song request.");
-                return;
-            }
-            if (!isNetworkAvailable()) {
-                speak("You are offline. Please check your internet connection.");
-                return;
-            }
-            speak("Playing " + msgs);
-            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=" + msgs));
-            startActivity(intent);
             return;
         }
 
@@ -402,23 +464,45 @@ public class MainActivity extends AppCompatActivity {
 
     private void openCamera(boolean useFrontCamera) {
         Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        takePictureIntent.addCategory(Intent.CATEGORY_DEFAULT);
         if (useFrontCamera) {
             takePictureIntent.putExtra("android.intent.extras.CAMERA_FACING", 1);
         }
-        if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
+        try {
             startActivity(takePictureIntent);
-        } else {
+        } catch (ActivityNotFoundException e) {
             speak("I couldn't find a camera app on your device.");
         }
     }
 
-    private void openGallery() {
-        Intent intent = new Intent(Intent.ACTION_VIEW);
-        intent.setType("image/*");
-        if (intent.resolveActivity(getPackageManager()) != null) {
-            startActivity(intent);
+    private void openMedia(String type) {
+        String permission;
+        int requestCode;
+        String mimeType;
+
+        if ("images".equals(type)) {
+            permission = Manifest.permission.READ_MEDIA_IMAGES;
+            requestCode = READ_MEDIA_IMAGES_PERMISSION_REQUEST;
+            mimeType = "image/*";
+        } else if ("videos".equals(type)) {
+            permission = Manifest.permission.READ_MEDIA_VIDEO;
+            requestCode = READ_MEDIA_VIDEO_PERMISSION_REQUEST;
+            mimeType = "video/*";
         } else {
-            speak("I couldn't find a gallery app on your device.");
+            return; // Should not happen
+        }
+
+        if (ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED) {
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setType(mimeType);
+            Intent chooser = Intent.createChooser(intent, "Open with...");
+            try {
+                startActivity(chooser);
+            } catch (ActivityNotFoundException e) {
+                speak("I couldn't find an app to show " + type + ".");
+            }
+        } else {
+            ActivityCompat.requestPermissions(this, new String[]{permission}, requestCode);
         }
     }
 
@@ -705,6 +789,20 @@ public class MainActivity extends AppCompatActivity {
                 speak("Camera permission granted. You can now use the camera features.");
             } else {
                 speak("Camera permission denied. I can't use the camera without it.");
+            }
+        }
+        if (requestCode == READ_MEDIA_IMAGES_PERMISSION_REQUEST) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                openMedia("images");
+            } else {
+                speak("Storage permission denied. I can't show images without it.");
+            }
+        }
+        if (requestCode == READ_MEDIA_VIDEO_PERMISSION_REQUEST) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                openMedia("videos");
+            } else {
+                speak("Storage permission denied. I can't show videos without it.");
             }
         }
     }
