@@ -1,4 +1,4 @@
-# 🎙️ Speech-to-Text AI Assistant
+# 🎙️ Jarvis-Mark-1 AI Assistant
 
 An Android application designed to act as a personal voice assistant. It leverages speech recognition to understand user commands and perform various actions—from making phone calls and sending messages to opening the camera and interacting with media. The assistant is built to be intuitive, responsive, and functional both online and offline for core commands.
 
@@ -82,42 +82,42 @@ Sync Gradle files via File > Sync Project with Gradle Files.
 - Online: Uses network-based recognition for higher accuracy.
 - Offline: Uses on-device recognition for basic commands.
 
-🗣️ Voice Commands
-🔌 Offline Commands (Work without Internet)
-|  |  | 
-|  |  | 
-|  |  | 
-|  |  | 
-|  |  | 
+🗣️ Voice Commands && 🌐 Online Commands (Require Internet)
+Device & System Commands:
 
+•"hey lock my screen" or "lock the screen": Locks the device.
 
-🌐 Online Commands (Require Internet)
-|  |  | 
-|  |  | 
-|  |  | 
-|  |  | 
-|  |  | 
+ This may require you to grant device administrator permissions to the app.
 
+•"hey call [contact name]" or "call [contact name]": Makes a phone call to the specified contact in your address book.
 
-🧠 Extended Voice Command Reference
-Based on the code in your project, here is a more detailed list of supported voice commands and their functions:
-📱 Device & System Commands
-- "hey lock my screen" or "lock the screen": Locks the device (requires Device Admin permission).
-- "hey call [contact name]" or "call [contact name]": Initiates a phone call to the specified contact.
-- "hey nancy take picture" or "take a picture": Opens the rear camera to take a photo.
-- "hey nancy take selfie" or "take a selfie": Opens the front camera to take a selfie.
-- "open camera": Opens the rear camera.
-- "open photos" or "show images": Opens the photo gallery.
-- "open videos" or "show videos": Opens the video gallery.
-💬 Information & Assistant Commands
-- "hey" or "hi": Triggers a friendly greeting from the assistant.
-- "time": Tells the current time.
-- "date": Tells the current date.
-- "remember [something]": Stores a piece of information for later recall.
-- "know": Retrieves previously stored information.
-🎵 Media Commands
-- "play video [video name]": Plays a video from YouTube. If no name is given, the assistant will prompt for one.
-- "play songs [song name]" or "play song [song name]": Plays a song from YouTube. If offline, opens the default music player. If no name is given, the assistant will prompt for one.
+•"hey nancy take picture" or "take a picture": Opens the rear camera to take a photo.
+
+•"hey nancy take selfie" or "take a selfie": Opens the front camera to take a selfie.
+
+•"open camera": Opens the rear camera.•"open photos" or "show images": Opens your photo gallery.
+
+•"open videos" or "show videos": Opens your video gallery.
+
+Information & Assistant Commands:
+
+•"hey": The app will respond with a greeting.
+
+•"hi": The app will respond with a greeting.
+
+•"time": The app will tell you the current time.
+
+•"date": The app will tell you the current date.
+
+•"remember [something]": The app will store a piece of information for you to recall later.
+
+•"know": The app will retrieve the information you previously asked it to remember.
+
+Media Commands:
+
+•"play video [video name]": Plays a video from YouTube. If you don't specify a video name, it will ask for one.
+
+•"play songs [song name]" or "play song [song name]": Plays a song from YouTube. If you are offline, it will open your default music player. If you don't specify a song name, it will ask for one.
 
 
 Note: Command phrasing is flexible—keyword detection drives execution.
