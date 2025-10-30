@@ -11,4 +11,5 @@
     <color name="jarvis_card_background">#1A243D</color>
     <color name="gradient_start_color">#1A243D</color>
     <color name="gradient_end_color">#0A0F1A</color>
+    <color name="micButton">#1A243D</color>
 </resources>
