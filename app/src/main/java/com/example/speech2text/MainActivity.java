@@ -3,7 +3,6 @@ package com.example.speech2text;
 import static com.example.speech2text.Functions.wishMe;
 
 import android.Manifest;
-import android.animation.ObjectAnimator;
 import android.app.admin.DevicePolicyManager;
 import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
@@ -37,8 +36,9 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.dynamicanimation.animation.SpringAnimation;
+import androidx.dynamicanimation.animation.SpringForce;
 
-import com.google.android.material.button.MaterialButton;
 import com.karumi.dexter.Dexter;
 import com.karumi.dexter.MultiplePermissionsReport;
 import com.karumi.dexter.PermissionToken;
@@ -76,8 +76,9 @@ public class MainActivity extends AppCompatActivity {
     private ComponentName deviceAdminComponent;
     private Intent deviceAdminIntent;
 
-    private MaterialButton micButton;
-    private ObjectAnimator pulseAnimator;
+    private OrbView orbView;
+    private SpringAnimation scaleXAnimation;
+    private SpringAnimation scaleYAnimation;
 
     private final ActivityResultLauncher<Intent> deviceAdminResultLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
@@ -127,6 +128,7 @@ public class MainActivity extends AppCompatActivity {
         initTextToSpeech();
         findbyid();
         result();
+        initAnimations();
     }
 
     private void initTextToSpeech(){
@@ -187,7 +189,8 @@ public class MainActivity extends AppCompatActivity {
 
     private void findbyid() {
         editText = findViewById(R.id.editText);
-        micButton = findViewById(R.id.button);
+        orbView = findViewById(R.id.orbView);
+        orbView.setOnClickListener(this::startRecording);
     }
 
     private void result() {
@@ -203,8 +206,8 @@ public class MainActivity extends AppCompatActivity {
 
                 }
                 @Override
-                public void onRmsChanged(float v) {
-
+                public void onRmsChanged(float rmsdB) {
+                    orbView.updateAmplitude(rmsdB);
                 }
                 @Override
                 public void onBufferReceived(byte[] bytes) {
@@ -212,11 +215,11 @@ public class MainActivity extends AppCompatActivity {
                 }
                 @Override
                 public void onEndOfSpeech() {
-                    stopPulseAnimation();
+                    stopRecordingAnimation();
                 }
                 @Override
                 public void onError(int i) {
-                    stopPulseAnimation();
+                    stopRecordingAnimation();
                     String errorMsg;
                     switch (i) {
                         case SpeechRecognizer.ERROR_NETWORK:
@@ -725,29 +728,35 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    private void startPulseAnimation() {
+    private void initAnimations() {
+        scaleXAnimation = new SpringAnimation(orbView, SpringAnimation.SCALE_X, 1f);
+        scaleYAnimation = new SpringAnimation(orbView, SpringAnimation.SCALE_Y, 1f);
+        scaleXAnimation.getSpring().setStiffness(SpringForce.STIFFNESS_LOW);
+        scaleYAnimation.getSpring().setStiffness(SpringForce.STIFFNESS_LOW);
+        scaleXAnimation.getSpring().setDampingRatio(SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY);
+        scaleYAnimation.getSpring().setDampingRatio(SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY);
+    }
+
+    private void startRecordingAnimation() {
         runOnUiThread(() -> {
-            if (pulseAnimator == null) {
-                pulseAnimator = (ObjectAnimator) android.animation.AnimatorInflater.loadAnimator(this, R.animator.mic_pulse);
-                pulseAnimator.setTarget(micButton);
-            }
-            pulseAnimator.start();
+            scaleXAnimation.getSpring().setFinalPosition(1.2f);
+            scaleYAnimation.getSpring().setFinalPosition(1.2f);
+            scaleXAnimation.start();
+            scaleYAnimation.start();
         });
     }
 
-    private void stopPulseAnimation() {
+    private void stopRecordingAnimation() {
         runOnUiThread(() -> {
-            if (pulseAnimator != null && pulseAnimator.isRunning()) {
-                pulseAnimator.cancel();
-                micButton.setScaleX(1.0f);
-                micButton.setScaleY(1.0f);
-                micButton.setAlpha(1.0f);
-            }
+            scaleXAnimation.getSpring().setFinalPosition(1f);
+            scaleYAnimation.getSpring().setFinalPosition(1f);
+            scaleXAnimation.start();
+            scaleYAnimation.start();
         });
     }
 
     public void startRecording(View view) {
-        startPulseAnimation();
+        startRecordingAnimation();
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
         intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
@@ -757,7 +766,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        stopPulseAnimation();
+        stopRecordingAnimation();
     }
 
     @Override
