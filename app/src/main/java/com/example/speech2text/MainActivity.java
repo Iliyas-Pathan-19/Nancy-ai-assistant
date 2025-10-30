@@ -3,6 +3,7 @@ package com.example.speech2text;
 import static com.example.speech2text.Functions.wishMe;
 
 import android.Manifest;
+import android.animation.ObjectAnimator;
 import android.app.admin.DevicePolicyManager;
 import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
@@ -36,6 +37,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import com.google.android.material.button.MaterialButton;
 import com.karumi.dexter.Dexter;
 import com.karumi.dexter.MultiplePermissionsReport;
 import com.karumi.dexter.PermissionToken;
@@ -71,6 +73,9 @@ public class MainActivity extends AppCompatActivity {
     private DevicePolicyManager devicePolicyManager;
     private ComponentName deviceAdminComponent;
     private Intent deviceAdminIntent;
+
+    private MaterialButton micButton;
+    private ObjectAnimator pulseAnimator;
 
     private final ActivityResultLauncher<Intent> deviceAdminResultLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
@@ -167,6 +172,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void findbyid() {
         editText = findViewById(R.id.editText);
+        micButton = findViewById(R.id.button);
     }
 
     private void result() {
@@ -191,10 +197,11 @@ public class MainActivity extends AppCompatActivity {
                 }
                 @Override
                 public void onEndOfSpeech() {
-
+                    stopPulseAnimation();
                 }
                 @Override
                 public void onError(int i) {
+                    stopPulseAnimation();
                     String errorMsg;
                     switch (i) {
                         case SpeechRecognizer.ERROR_NETWORK:
@@ -760,11 +767,39 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    private void startPulseAnimation() {
+        runOnUiThread(() -> {
+            if (pulseAnimator == null) {
+                pulseAnimator = (ObjectAnimator) android.animation.AnimatorInflater.loadAnimator(this, R.animator.mic_pulse);
+                pulseAnimator.setTarget(micButton);
+            }
+            pulseAnimator.start();
+        });
+    }
+
+    private void stopPulseAnimation() {
+        runOnUiThread(() -> {
+            if (pulseAnimator != null && pulseAnimator.isRunning()) {
+                pulseAnimator.cancel();
+                micButton.setScaleX(1.0f);
+                micButton.setScaleY(1.0f);
+                micButton.setAlpha(1.0f);
+            }
+        });
+    }
+
     public void startRecording(View view) {
+        startPulseAnimation();
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
         intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
         recognizer.startListening(intent);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        stopPulseAnimation();
     }
 
     @Override
