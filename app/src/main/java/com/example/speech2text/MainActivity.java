@@ -16,6 +16,7 @@ import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.ContactsContract;
 import android.provider.MediaStore;
@@ -69,6 +70,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int CAMERA_PERMISSION_REQUEST = 3;
     private static final int READ_MEDIA_IMAGES_PERMISSION_REQUEST = 4;
     private static final int READ_MEDIA_VIDEO_PERMISSION_REQUEST = 5;
+    private static final int READ_EXTERNAL_STORAGE_PERMISSION_REQUEST = 6;
 
     private DevicePolicyManager devicePolicyManager;
     private ComponentName deviceAdminComponent;
@@ -96,8 +98,21 @@ public class MainActivity extends AppCompatActivity {
         devicePolicyManager = (DevicePolicyManager) getSystemService(DEVICE_POLICY_SERVICE);
         deviceAdminComponent = new ComponentName(this, DeviceAdmin.class);
 
+        List<String> permissions = new ArrayList<>();
+        permissions.add(Manifest.permission.RECORD_AUDIO);
+        permissions.add(Manifest.permission.READ_CONTACTS);
+        permissions.add(Manifest.permission.CALL_PHONE);
+        permissions.add(Manifest.permission.CAMERA);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissions.add(Manifest.permission.READ_MEDIA_IMAGES);
+            permissions.add(Manifest.permission.READ_MEDIA_VIDEO);
+        } else {
+            permissions.add(Manifest.permission.READ_EXTERNAL_STORAGE);
+        }
+
         Dexter.withContext(this)
-                .withPermissions(Manifest.permission.RECORD_AUDIO, Manifest.permission.READ_CONTACTS, Manifest.permission.CALL_PHONE, Manifest.permission.CAMERA, Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO)
+                .withPermissions(permissions)
                 .withListener(new MultiplePermissionsListener() {
                     @Override
                     public void onPermissionsChecked(MultiplePermissionsReport multiplePermissionsReport) {
@@ -260,10 +275,7 @@ public class MainActivity extends AppCompatActivity {
                 deviceAdminIntent.putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, "This permission is required to lock the screen.");
                 speak("I need device admin permission to lock the screen. Please grant it now.", "requestDeviceAdmin");
             }
-            return;
-        }
-
-        if (msgs.startsWith("hey call") || msgs.startsWith("call")) {
+        } else if (msgs.startsWith("hey call") || msgs.startsWith("call")) {
             String contact;
             if (msgs.startsWith("hey call")) {
                 contact = msgs.substring("hey call".length()).trim();
@@ -276,131 +288,84 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CALL_PHONE}, CALL_PHONE_PERMISSION_REQUEST);
             }
-            return;
-        }
-
-        if (msgs.contains("hey nancy take picture") || msgs.contains("take a picture")) {
+        } else if (msgs.contains("hey nancy take picture") || msgs.contains("take a picture")) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
                 openCamera(false);
             } else {
                 ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_REQUEST);
             }
-            return;
-        }
-
-        if (msgs.contains("hey nancy take selfie") || msgs.contains("take a selfie")) {
+        } else if (msgs.contains("hey nancy take selfie") || msgs.contains("take a selfie")) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
                 openCamera(true);
             } else {
                 ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_REQUEST);
             }
-            return;
-        }
-
-        if (msgs.contains("open camera")) {
+        } else if (msgs.contains("open camera")) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
                 openCamera(false);
             } else {
                 ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_REQUEST);
             }
-            return;
-        }
-
-        if (msgs.contains("open photos") || msgs.contains("show images")) {
+        } else if (msgs.contains("open photos") || msgs.contains("show images")) {
             openMedia("images");
-            return;
-        }
-
-        if (msgs.contains("open videos") || msgs.contains("show videos")) {
+        } else if (msgs.contains("open videos") || msgs.contains("show videos")) {
             openMedia("videos");
-            return;
-        }
-
-        if (msgs.contains("hey")) {
+        } else if (msgs.contains("hey")) {
             speak("Assalamualikum , ji Iliyas how can i help you? ");
-            return;
         } else if (msgs.contains("hi")) {
             speak("Assalamualikum ji, Nancy is here always for you Iliyas");
-            return;
-        }
-        if (msgs.contains("time")) {
+        } else if (msgs.contains("time")) {
             Date date = new Date();
             String time = DateUtils.formatDateTime(this, date.getTime(), DateUtils.FORMAT_SHOW_TIME);
             speak("ji The time is " + time);
-            return;
-        }
-        if (msgs.contains("date")) {
+        } else if (msgs.contains("date")) {
             SimpleDateFormat at = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
             Calendar cal = Calendar.getInstance();
             String date = at.format(cal.getTime());
             speak("ji The date is " + date);
-            return;
-        }
-        if (msgs.contains("remember")) {
+        } else if (msgs.contains("remember")) {
             speak("okay boss i'll remember that for you!");
             writeToFile(msgs.replace("nancy remember that", " "));
-            return;
-        }
-        if (msgs.contains("know")) {
+        } else if (msgs.contains("know")) {
             String data = readFromFile();
             speak("yes boss you told me to remember that " + data);
-            return;
-        }
-
-        // --- NETWORK-DEPENDENT COMMANDS ---
-
-        if (isWaitingForVideo) {
+        } else if (isWaitingForVideo) {
             isWaitingForVideo = false;
             if (msgs.contains("cancel") || msgs.contains("stop")) {
                 speak("Okay, cancelling the video request.");
-                return;
-            }
-            if (!isNetworkAvailable()) {
+            } else if (!isNetworkAvailable()) {
                 speak("You are offline. Please check your internet connection to play videos.");
-                return;
+            } else {
+                speak("Playing " + msgs + " on YouTube.");
+                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=" + msgs));
+                startActivity(intent);
             }
-            speak("Playing " + msgs + " on YouTube.");
-            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=" + msgs));
-            startActivity(intent);
-            return;
-        }
-
-        if (isWaitingForSong) {
+        } else if (isWaitingForSong) {
             isWaitingForSong = false;
             if (msgs.contains("cancel") || msgs.contains("stop")) {
                 speak("Okay, cancelling the song request.");
-                return;
-            }
-            if (!isNetworkAvailable()) {
+            } else if (!isNetworkAvailable()) {
                 speak("You are offline. Please check your internet connection.");
-                return;
-            }
-            speak("Playing " + msgs);
-            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=" + msgs));
-            startActivity(intent);
-            return;
-        }
-
-        if (msgs.contains("play video")) {
-            if (!isNetworkAvailable()) {
-                speak("You need an internet connection to play videos from YouTube.");
-                return;
-            }
-
-            String videoName = msgs.substring(msgs.indexOf("play video") + "play video".length()).trim();
-
-            if (videoName.isEmpty()) {
-                isWaitingForVideo = true;
-                speak("Which video should I play on YouTube for you?", "videoQuery");
             } else {
-                speak("Playing " + videoName + " on YouTube.");
-                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=" + videoName));
+                speak("Playing " + msgs);
+                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=" + msgs));
                 startActivity(intent);
             }
-            return;
-        }
-
-        if (msgs.contains("play songs") || msgs.contains("play song")) {
+        } else if (msgs.contains("play video")) {
+            if (!isNetworkAvailable()) {
+                speak("You need an internet connection to play videos from YouTube.");
+            } else {
+                String videoName = msgs.substring(msgs.indexOf("play video") + "play video".length()).trim();
+                if (videoName.isEmpty()) {
+                    isWaitingForVideo = true;
+                    speak("Which video should I play on YouTube for you?", "videoQuery");
+                } else {
+                    speak("Playing " + videoName + " on YouTube.");
+                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=" + videoName));
+                    startActivity(intent);
+                }
+            }
+        } else if (msgs.contains("play songs") || msgs.contains("play song")) {
             if (isNetworkAvailable()) {
                 String songName;
                 if (msgs.contains("play songs")) {
@@ -421,26 +386,15 @@ public class MainActivity extends AppCompatActivity {
                 speak("You are offline. Opening your music player.");
                 playOfflineMusic();
             }
-            return;
-        }
-
-        if (!isNetworkAvailable()) {
+        } else if (!isNetworkAvailable()) {
             speak("You are offline. Please check your internet connection.");
-            return;
-        }
-
-        // --- STRICTLY ONLINE COMMANDS ---
-
-        if (msgs.startsWith("hey send") || msgs.startsWith("send")) {
+        } else if (msgs.startsWith("hey send") || msgs.startsWith("send")) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
                 sendMessage(msgs);
             } else {
                 ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_CONTACTS}, READ_CONTACTS_PERMISSION_REQUEST);
             }
-            return;
-        }
-
-        if (msgs.contains("research about")) {
+        } else if (msgs.contains("research about")) {
             String searchQuery = msgs.substring(msgs.indexOf("research about") + "research about".length()).trim();
             if (!searchQuery.isEmpty()) {
                 speak("Alright Iliyas, I am starting the research on " + searchQuery + ". Here is what I found on Perplexity.");
@@ -449,23 +403,15 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 speak("What topic would you like me to research?");
             }
-            return;
-        }
-
-        if (msgs.contains("google")) {
+        } else if (msgs.contains("google")) {
             Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com"));
             startActivity(intent);
-            return;
-        }
-        if (msgs.contains("youtube")) {
+        } else if (msgs.contains("youtube")) {
             Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com"));
             startActivity(intent);
-            return;
-        }
-        if (msgs.contains("search")) {
+        } else if (msgs.contains("search")) {
             Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=" + msgs.replace("search", " ")));
             startActivity(intent);
-            return;
         }
     }
 
@@ -487,16 +433,28 @@ public class MainActivity extends AppCompatActivity {
         int requestCode;
         String mimeType;
 
-        if ("images".equals(type)) {
-            permission = Manifest.permission.READ_MEDIA_IMAGES;
-            requestCode = READ_MEDIA_IMAGES_PERMISSION_REQUEST;
-            mimeType = "image/*";
-        } else if ("videos".equals(type)) {
-            permission = Manifest.permission.READ_MEDIA_VIDEO;
-            requestCode = READ_MEDIA_VIDEO_PERMISSION_REQUEST;
-            mimeType = "video/*";
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if ("images".equals(type)) {
+                permission = Manifest.permission.READ_MEDIA_IMAGES;
+                requestCode = READ_MEDIA_IMAGES_PERMISSION_REQUEST;
+                mimeType = "image/*";
+            } else if ("videos".equals(type)) {
+                permission = Manifest.permission.READ_MEDIA_VIDEO;
+                requestCode = READ_MEDIA_VIDEO_PERMISSION_REQUEST;
+                mimeType = "video/*";
+            } else {
+                return;
+            }
         } else {
-            return; // Should not happen
+            permission = Manifest.permission.READ_EXTERNAL_STORAGE;
+            requestCode = READ_EXTERNAL_STORAGE_PERMISSION_REQUEST;
+            if ("images".equals(type)) {
+                mimeType = "image/*";
+            } else if ("videos".equals(type)) {
+                mimeType = "video/*";
+            } else {
+                return;
+            }
         }
 
         if (ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED) {
@@ -838,6 +796,13 @@ public class MainActivity extends AppCompatActivity {
                 openMedia("videos");
             } else {
                 speak("Storage permission denied. I can't show videos without it.");
+            }
+        }
+        if (requestCode == READ_EXTERNAL_STORAGE_PERMISSION_REQUEST) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                speak("Storage permission granted.");
+            } else {
+                speak("Storage permission denied.");
             }
         }
     }
